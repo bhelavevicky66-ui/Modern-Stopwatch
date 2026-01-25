@@ -32,11 +32,9 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
 
             alarms.forEach(alarm => {
                 if (alarm.isActive && alarm.time === currentTimeString && now.getSeconds() === 0) {
-                    // Simple alert for now, can be improved to a modal or sound
-                    // Using setTimeout to not block the rendering of the time update immediately
                     setTimeout(() => {
-                        if (window.confirm(`Alarm: ${alarm.time}\nClick OK to snooze, Cancel to dismiss.`)) {
-                            // Snooze logic could go here
+                        if (window.confirm(`Alarm: ${formatAlarmTime(alarm.time)}\nClick OK to snooze, Cancel to dismiss.`)) {
+                            // Snooze logic placeholder
                         }
                     }, 0);
                 }
@@ -45,6 +43,18 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
 
         return () => clearInterval(timer);
     }, [alarms]);
+
+    const formatAlarmTime = (time: string) => {
+        const [hours, minutes] = time.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours));
+        date.setMinutes(parseInt(minutes));
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    };
 
     const addAlarm = () => {
         if (!newAlarmTime) return;
@@ -75,8 +85,8 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
         <div className="flex flex-col items-center w-full max-w-md mx-auto">
             {/* Current Time Display */}
             <div className={`mono-font text-6xl font-bold mb-8 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {currentTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-                <span className="text-2xl text-gray-500 ml-2">
+                {currentTime.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' })}
+                <span className="text-xl text-gray-500 ml-2 font-medium">
                     {currentTime.getSeconds().toString().padStart(2, '0')}
                 </span>
             </div>
@@ -136,7 +146,7 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                                 <Bell className="w-5 h-5" />
                             </div>
                             <span className={`text-3xl font-bold mono-font ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {alarm.time}
+                                {formatAlarmTime(alarm.time)}
                             </span>
                         </div>
 
