@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Trash2, BellOff, X, Save, Edit3, ChevronUp, ChevronDown, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bell, Plus, Trash2, BellOff, X, Save, Edit3, ChevronUp, ChevronDown, Check, Clock } from 'lucide-react';
 import { Alarm as AlarmType } from '../types';
 
 interface AlarmProps {
@@ -16,6 +16,11 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAlarmId, setEditingAlarmId] = useState<string | null>(null);
+    const [isSnoozeOpen, setIsSnoozeOpen] = useState(false);
+
+    // Ringing State
+    const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
+    const [snoozedAlarms, setSnoozedAlarms] = useState<{ [key: string]: number }>({}); // alarmId -> nextTriggerTimestamp
 
     // Form State
     const [hour, setHour] = useState('07');
@@ -37,48 +42,112 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
         { id: 6, label: 'Sa' },
     ];
 
+    const snoozeOptions = [
+        { value: 0, label: 'Disabled' },
+        { value: 5, label: '5 minutes' },
+        { value: 10, label: '10 minutes' },
+        { value: 20, label: '20 minutes' },
+        { value: 30, label: '30 minutes' },
+        { value: 60, label: '1 hour' },
+    ];
+
     useEffect(() => {
         localStorage.setItem('alarms', JSON.stringify(alarms));
     }, [alarms]);
 
+    // Check Alarms Interval
     useEffect(() => {
         const timer = setInterval(() => {
             const now = new Date();
             setCurrentTime(now);
-            checkAlarms(now);
+
+            if (!ringingAlarm) {
+                checkAlarms(now);
+            }
         }, 1000);
         return () => clearInterval(timer);
-    }, [alarms]);
+    }, [alarms, snoozedAlarms, ringingAlarm]);
+
+    // Auto-dismiss/snooze after 1 minute of ringing
+    useEffect(() => {
+        if (ringingAlarm) {
+            const timeout = setTimeout(() => {
+                handleSnooze(ringingAlarm);
+            }, 60000); // 1 minute
+            return () => clearTimeout(timeout);
+        }
+    }, [ringingAlarm]);
 
     const checkAlarms = (now: Date) => {
+        // 1. Check scheduled alarms
         const currentTimeString = now.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
-        }); // e.g., "7:00 AM"
+        });
 
         alarms.forEach(alarm => {
-            if (alarm.isActive && alarm.time === currentTimeString && now.getSeconds() === 0) {
-                // Check if repeat is enabled and today is one of the selected days
+            if (!alarm.isActive) return;
+
+            // Check if snoozed
+            if (snoozedAlarms[alarm.id]) {
+                if (now.getTime() >= snoozedAlarms[alarm.id]) {
+                    triggerAlarm(alarm);
+                    // Remove from snoozed list temporarily so it doesn't double trigger immediately
+                    const newSnoozed = { ...snoozedAlarms };
+                    delete newSnoozed[alarm.id];
+                    setSnoozedAlarms(newSnoozed);
+                }
+                return;
+            }
+
+            // Check regular time match
+            if (alarm.time === currentTimeString && now.getSeconds() === 0) {
                 const today = now.getDay();
-                const shouldTrigger = !alarm.days || alarm.days.length === 0 || alarm.days.includes(today);
+                // If repeat is ON, check days. If OFF, trigger once.
+                const shouldTrigger = (!alarm.days || alarm.days.length === 0) || alarm.days.includes(today);
 
                 if (shouldTrigger) {
-                    setTimeout(() => {
-                        // eslint-disable-next-line no-restricted-globals
-                        if (confirm(`Alarm: ${alarm.label || 'Time up!'}\nClick OK to snooze, Cancel to dismiss.`)) {
-                            // Snooze logic placeholder
-                        }
-                    }, 0);
+                    triggerAlarm(alarm);
                 }
             }
         });
     };
 
-    const formatAlarmTime = (timeStr: string) => {
-        // timeStr is already stored as "H:MM AM/PM" or similar from the picker? 
-        // Let's standardize storage to "h:mm AM/PM" to match checkAlarms
-        return timeStr;
+    const triggerAlarm = (alarm: AlarmType) => {
+        setRingingAlarm(alarm);
+        // Here you would play sound
+        if (navigator.vibrate) navigator.vibrate([1000, 500, 1000]);
+    };
+
+    const handleDismiss = () => {
+        // Stop ringing
+        setRingingAlarm(null);
+        // If it was a snooze, ensure it's cleared
+        if (ringingAlarm) {
+            const newSnoozed = { ...snoozedAlarms };
+            delete newSnoozed[ringingAlarm.id];
+            setSnoozedAlarms(newSnoozed);
+
+            // If not repeating, disable it
+            if (!ringingAlarm.days || ringingAlarm.days.length === 0) {
+                toggleAlarm(ringingAlarm.id);
+            }
+        }
+    };
+
+    const handleSnooze = (alarm: AlarmType) => {
+        setRingingAlarm(null);
+
+        // Default 10 min if set to disabled but somehow snoozed (fallback logic)
+        // Or if alarm has specific snooze setting
+        const snoozeDuration = alarm.snooze > 0 ? alarm.snooze : 10;
+
+        const nextTime = new Date().getTime() + snoozeDuration * 60 * 1000;
+        setSnoozedAlarms(prev => ({
+            ...prev,
+            [alarm.id]: nextTime
+        }));
     };
 
     const openModal = (alarm?: AlarmType) => {
@@ -93,7 +162,7 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
             setSelectedDays(alarm.days || []);
             setRepeat(!!(alarm.days && alarm.days.length > 0));
             setSound(alarm.sound || 'Chimes');
-            setSnooze(alarm.snooze || 10);
+            setSnooze(alarm.snooze !== undefined ? alarm.snooze : 10);
         } else {
             setEditingAlarmId(null);
             setHour('07');
@@ -106,6 +175,7 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
             setSnooze(10);
         }
         setIsModalOpen(true);
+        setIsSnoozeOpen(false);
     };
 
     const handleSave = () => {
@@ -129,6 +199,18 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
         setIsModalOpen(false);
     };
 
+    const toggleAlarm = (id: string) => {
+        setAlarms(alarms.map(alarm =>
+            alarm.id === id ? { ...alarm, isActive: !alarm.isActive } : alarm
+        ));
+        // Clear snooze if manually toggled
+        if (snoozedAlarms[id]) {
+            const newSnoozed = { ...snoozedAlarms };
+            delete newSnoozed[id];
+            setSnoozedAlarms(newSnoozed);
+        }
+    };
+
     const toggleDay = (dayId: number) => {
         if (selectedDays.includes(dayId)) {
             setSelectedDays(selectedDays.filter(d => d !== dayId));
@@ -137,7 +219,6 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
         }
     };
 
-    // Time Picker Helpers
     const adjustHour = (inc: number) => {
         let h = parseInt(hour) + inc;
         if (h > 12) h = 1;
@@ -154,6 +235,11 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
 
     const togglePeriod = () => {
         setPeriod(prev => prev === 'AM' ? 'PM' : 'AM');
+    };
+
+    const formatAlarmTime = (time: string) => {
+        // Already formatted in state, but consistency check
+        return time;
     };
 
     return (
@@ -200,22 +286,21 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                                     {alarm.time}
                                 </span>
                                 {alarm.label && <span className="text-xs text-gray-400">{alarm.label}</span>}
-                                {alarm.days && alarm.days.length > 0 && (
-                                    <span className="text-xs text-blue-400">
-                                        {alarm.days.length === 7 ? 'Every day' :
-                                            days.filter(d => alarm.days?.includes(d.id)).map(d => d.label).join(', ')}
+                                {snoozedAlarms[alarm.id] && alarm.isActive && (
+                                    <span className="text-xs text-amber-500 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" /> Snoozed
                                     </span>
                                 )}
                             </div>
                         </div>
-
-                        <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                        {/* Toggle */}
+                        <div onClick={e => e.stopPropagation()}>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
                                     type="checkbox"
                                     className="sr-only peer"
                                     checked={alarm.isActive}
-                                    onChange={() => setAlarms(alarms.map(a => a.id === alarm.id ? { ...a, isActive: !a.isActive } : a))}
+                                    onChange={() => toggleAlarm(alarm.id)}
                                 />
                                 <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
@@ -224,10 +309,35 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                 ))}
             </div>
 
-            {/* Modal Overlay */}
+            {/* Ringing Modal (Overlay) */}
+            {ringingAlarm && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+                    <div className="flex flex-col items-center animate-pulse">
+                        <Bell className="w-24 h-24 text-white mb-6" />
+                        <h2 className="text-4xl font-bold text-white mb-2">{ringingAlarm.time}</h2>
+                        <p className="text-xl text-gray-300 mb-12">{ringingAlarm.label || 'Alarm'}</p>
+
+                        <div className="flex flex-col w-full gap-4 min-w-[300px]">
+                            <button
+                                onClick={() => handleSnooze(ringingAlarm)}
+                                className="w-full py-4 bg-white text-black rounded-2xl font-bold text-xl hover:bg-gray-200 transition-colors"
+                            >
+                                Snooze ({ringingAlarm.snooze || 10} min)
+                            </button>
+                            <button
+                                onClick={handleDismiss}
+                                className="w-full py-4 bg-red-500/20 text-red-500 border border-red-500/50 rounded-2xl font-bold text-xl hover:bg-red-500/30 transition-colors"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit/Add Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    {/* Modal Content */}
                     <div className={`w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden ${isDarkMode ? 'bg-[#1e293b] text-white' : 'bg-white text-gray-900'}`}>
                         {/* Header */}
                         <div className="flex justify-between items-center p-6 pb-2">
@@ -242,10 +352,10 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                             )}
                         </div>
 
-                        {/* Time Picker */}
+                        {/* Content */}
                         <div className="p-6 pt-2">
+                            {/* Time Picker */}
                             <div className="flex justify-center items-center gap-2 mb-6">
-                                {/* Timer Columns */}
                                 <div className="flex flex-col items-center">
                                     <button onClick={() => adjustHour(1)} className="p-2 text-gray-400 hover:text-blue-500"><ChevronUp /></button>
                                     <span className="text-5xl font-bold w-20 text-center">{hour}</span>
@@ -265,7 +375,7 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                                 </div>
                             </div>
 
-                            {/* Label Input */}
+                            {/* Label */}
                             <div className={`flex items-center gap-3 p-3 rounded-xl mb-4 ${isDarkMode ? 'bg-black/20' : 'bg-gray-100'}`}>
                                 <Edit3 className="w-5 h-5 text-gray-400" />
                                 <input
@@ -305,7 +415,7 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                                 )}
                             </div>
 
-                            {/* Sound & Snooze (Mock Dropdowns) */}
+                            {/* Sound */}
                             <div className="space-y-3 mb-8">
                                 <div className={`flex items-center justify-between p-3 rounded-xl ${isDarkMode ? 'bg-black/20' : 'bg-gray-100'}`}>
                                     <div className="flex items-center gap-3">
@@ -314,16 +424,42 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                                     </div>
                                     <ChevronDown className="w-4 h-4 text-gray-400" />
                                 </div>
-                                <div className={`flex items-center justify-between p-3 rounded-xl ${isDarkMode ? 'bg-black/20' : 'bg-gray-100'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <BellOff className="w-5 h-5 text-gray-400" />
-                                        <span>{snooze} minutes</span>
-                                    </div>
-                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+
+                                {/* Snooze Dropdown */}
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsSnoozeOpen(!isSnoozeOpen)}
+                                        className={`w-full flex items-center justify-between p-3 rounded-xl ${isDarkMode ? 'bg-black/20' : 'bg-gray-100'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <BellOff className="w-5 h-5 text-gray-400" />
+                                            <span>{snoozeOptions.find(o => o.value === snooze)?.label || `${snooze} minutes`}</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isSnoozeOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {isSnoozeOpen && (
+                                        <div className={`absolute bottom-full left-0 w-full mb-2 rounded-xl overflow-hidden shadow-xl z-10 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                            {snoozeOptions.map(option => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => {
+                                                        setSnooze(option.value);
+                                                        setIsSnoozeOpen(false);
+                                                    }}
+                                                    className={`w-full text-left p-3 hover:bg-teal-500/10 hover:text-teal-500 flex items-center gap-2 ${snooze === option.value ? 'text-teal-500 bg-teal-500/5' : (isDarkMode ? 'text-gray-300' : 'text-gray-700')
+                                                        }`}
+                                                >
+                                                    {snooze === option.value && <div className="w-1 h-4 bg-teal-500 rounded-full" />}
+                                                    <span className={snooze === option.value ? 'font-bold' : ''}>{option.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Footer Actions */}
+                            {/* Footer */}
                             <div className="flex gap-3">
                                 <button
                                     onClick={handleSave}
@@ -333,7 +469,7 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
                                     Save
                                 </button>
                                 <button
-                                    onClick={() => setIsModalOpen(false)}
+                                    onClick={() => { setIsModalOpen(false); setIsSnoozeOpen(false); }}
                                     className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 ${isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'}`}
                                 >
                                     <X className="w-4 h-4" />
