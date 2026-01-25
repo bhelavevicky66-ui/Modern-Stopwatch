@@ -8,7 +8,13 @@ import {
   Maximize2,
   Minimize2,
   Sparkles,
-  Bell
+  Bell,
+  X,
+  Save,
+  Edit3,
+  ChevronUp,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import Stopwatch from './components/Stopwatch';
 import Timer from './components/Timer';

@@ -1,10 +1,12 @@
 
 export interface Alarm {
   id: string;
-  time: string; // HH:MM format
+  time: string; // HH:MM:AM/PM format
   isActive: boolean;
-  label?: string;
-  days?: number[]; // 0-6 for Sun-Sat, optional for recurring
+  label: string;
+  days: number[]; // 0-6 for Sun-Sat
+  sound: string;
+  snooze: number; // minutes
 }
 
 export interface Lap {
