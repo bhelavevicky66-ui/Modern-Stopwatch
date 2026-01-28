@@ -97,34 +97,42 @@ const App: React.FC = () => {
       {/* Overlay for readability when bg image is set */}
       {backgroundImage && <div className={`absolute inset-0 ${isDarkMode ? 'bg-black/60' : 'bg-white/40'} backdrop-blur-sm z-0 pointer-events-none`} />}
 
-      <div className="relative z-10 w-full flex flex-col items-center">
+      {/* Decorative Blobs (Full Screen) */}
+      {!backgroundImage && (
+        <>
+          <div className="absolute top-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-blue-500/20 rounded-full blur-[100px] pointer-events-none z-0" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[50vh] h-[50vh] bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0" />
+        </>
+      )}
+
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center min-h-screen py-8">
         {/* Header Controls */}
-        <div className="flex justify-between w-full mb-8 items-center">
+        <div className="flex justify-between w-full mb-8 items-center px-4">
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2">
             <Clock className="w-6 h-6 text-blue-500" />
-            Chrono<span className="text-blue-500">Flow</span>
+            <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Chrono<span className="text-blue-500">Flow</span></span>
           </h1>
           <div className="flex gap-2">
             <button
               onClick={() => setShowAI(!showAI)}
-              className={`p-2 rounded-full transition-all ${showAI ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/50' : (isDarkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300')}`}
+              className={`p-2 rounded-full transition-all ${showAI ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/50' : (isDarkMode ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
             >
               <Sparkles className="w-5 h-5" />
             </button>
             <button
               onClick={toggleFullscreen}
-              className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'}`}
+              className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
             >
               {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'}`}
+              className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
             >
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <label className={`p-2 rounded-full transition-all cursor-pointer ${isDarkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'}`}>
+            <label className={`p-2 rounded-full transition-all cursor-pointer ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
               <input
                 type="file"
                 accept="image/*"
@@ -136,50 +144,48 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Glass Card */}
-        <div className={`w-full relative rounded-[2rem] p-8 shadow-2xl transition-all duration-500 overflow-hidden ${isDarkMode ? 'glass' : 'bg-white shadow-lg border border-gray-100 text-gray-800'}`}>
+        <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
+          {/* Main Glass Card */}
+          <div className={`w-full relative rounded-[2rem] p-8 shadow-2xl transition-all duration-500 overflow-hidden mx-4 ${isDarkMode ? 'glass bg-black/40 backdrop-blur-xl border border-white/10' : 'bg-white/80 backdrop-blur-xl shadow-lg border border-gray-100 text-gray-800'}`}>
 
-          {/* Background Decorative Blobs */}
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+            {/* Tab Switcher */}
+            <div className="flex gap-4 mb-10 relative z-10">
+              <button
+                onClick={(e) => { setActiveTab(AppTab.STOPWATCH); handleRipple(e); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ripple border ${activeTab === AppTab.STOPWATCH ? (isDarkMode ? 'bg-white/10 border-white/10 text-white shadow-lg' : 'bg-white border-white text-blue-600 shadow-md') : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
+              >
+                <Clock className="w-4 h-4" />
+                Stopwatch
+              </button>
+              <button
+                onClick={(e) => { setActiveTab(AppTab.TIMER); handleRipple(e); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ripple border ${activeTab === AppTab.TIMER ? (isDarkMode ? 'bg-white/10 border-white/10 text-white shadow-lg' : 'bg-white border-white text-blue-600 shadow-md') : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
+              >
+                <TimerIcon className="w-4 h-4" />
+                Timer
+              </button>
+              <button
+                onClick={(e) => { setActiveTab(AppTab.ALARM); handleRipple(e); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ripple border ${activeTab === AppTab.ALARM ? (isDarkMode ? 'bg-white/10 border-white/10 text-white shadow-lg' : 'bg-white border-white text-blue-600 shadow-md') : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
+              >
+                <Bell className="w-4 h-4" />
+                Alarm
+              </button>
+            </div>
 
-          {/* Tab Switcher */}
-          <div className="flex gap-4 mb-10 relative z-10">
-            <button
-              onClick={(e) => { setActiveTab(AppTab.STOPWATCH); handleRipple(e); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ripple border ${activeTab === AppTab.STOPWATCH ? (isDarkMode ? 'bg-white/10 border-white/10 text-white shadow-lg' : 'bg-white border-white text-blue-600 shadow-md') : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
-            >
-              <Clock className="w-4 h-4" />
-              Stopwatch
-            </button>
-            <button
-              onClick={(e) => { setActiveTab(AppTab.TIMER); handleRipple(e); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ripple border ${activeTab === AppTab.TIMER ? (isDarkMode ? 'bg-white/10 border-white/10 text-white shadow-lg' : 'bg-white border-white text-blue-600 shadow-md') : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
-            >
-              <TimerIcon className="w-4 h-4" />
-              Timer
-            </button>
-            <button
-              onClick={(e) => { setActiveTab(AppTab.ALARM); handleRipple(e); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ripple border ${activeTab === AppTab.ALARM ? (isDarkMode ? 'bg-white/10 border-white/10 text-white shadow-lg' : 'bg-white border-white text-blue-600 shadow-md') : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
-            >
-              <Bell className="w-4 h-4" />
-              Alarm
-            </button>
+            {/* Content Area */}
+            <div className="relative z-10">
+              {activeTab === AppTab.STOPWATCH && <Stopwatch isDarkMode={isDarkMode} />}
+              {activeTab === AppTab.TIMER && <Timer isDarkMode={isDarkMode} />}
+              {activeTab === AppTab.ALARM && <Alarm isDarkMode={isDarkMode} />}
+            </div>
           </div>
 
-          {/* Content Area */}
-          <div className="relative z-10">
-            {activeTab === AppTab.STOPWATCH && <Stopwatch isDarkMode={isDarkMode} />}
-            {activeTab === AppTab.TIMER && <Timer isDarkMode={isDarkMode} />}
-            {activeTab === AppTab.ALARM && <Alarm isDarkMode={isDarkMode} />}
-          </div>
+          {/* AI Drawer (Gemini Insights) */}
+          {showAI && <AIInsights isDarkMode={isDarkMode} />}
         </div>
 
-        {/* AI Drawer (Gemini Insights) */}
-        {showAI && <AIInsights isDarkMode={isDarkMode} />}
-
-        <footer className="mt-8 text-sm text-gray-500 font-medium pb-8">
+        <footer className={`mt-auto pt-8 text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           Precision timekeeping redefined
         </footer>
       </div>
