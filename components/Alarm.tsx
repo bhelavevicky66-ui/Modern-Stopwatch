@@ -21,7 +21,6 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
     // Ringing State
     const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
     const [snoozedAlarms, setSnoozedAlarms] = useState<{ [key: string]: number }>({}); // alarmId -> nextTriggerTimestamp
-    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Form State
     const [hour, setHour] = useState('07');
@@ -117,25 +116,13 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
 
     const triggerAlarm = (alarm: AlarmType) => {
         setRingingAlarm(alarm);
-
-        // Play Sound
-        if (!audioRef.current) {
-            audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
-        }
-        audioRef.current.loop = true;
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(e => console.error("Audio play failed:", e));
-
+        // Here you would play sound
         if (navigator.vibrate) navigator.vibrate([1000, 500, 1000]);
     };
 
     const handleDismiss = () => {
         // Stop ringing
         setRingingAlarm(null);
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
         // If it was a snooze, ensure it's cleared
         if (ringingAlarm) {
             const newSnoozed = { ...snoozedAlarms };
@@ -151,10 +138,6 @@ const Alarm: React.FC<AlarmProps> = ({ isDarkMode }) => {
 
     const handleSnooze = (alarm: AlarmType) => {
         setRingingAlarm(null);
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
 
         // Default 10 min if set to disabled but somehow snoozed (fallback logic)
         // Or if alarm has specific snooze setting
