@@ -90,22 +90,21 @@ const App: React.FC = () => {
   };
 
   return (
-    <div
-      className={`transition-all duration-500 flex flex-col items-center w-full min-h-screen ${backgroundImage ? 'bg-cover bg-center' : ''}`}
-      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
-    >
-      {/* Overlay for readability when bg image is set */}
-      {backgroundImage && <div className={`absolute inset-0 ${isDarkMode ? 'bg-black/60' : 'bg-white/40'} backdrop-blur-sm z-0 pointer-events-none`} />}
+    <div className="w-full min-h-screen bg-black flex justify-center items-center overflow-hidden">
+      <div
+        className={`relative w-full max-w-md min-h-screen flex flex-col items-center py-8 transition-all duration-500 shadow-2xl overflow-hidden ${backgroundImage ? 'bg-cover bg-center' : ''}`}
+        style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
+      >
+        {/* Overlay for readability when bg image is set */}
+        {backgroundImage && <div className={`absolute inset-0 ${isDarkMode ? 'bg-black/60' : 'bg-white/40'} backdrop-blur-sm z-0 pointer-events-none`} />}
 
-      {/* Decorative Blobs (Full Screen) */}
-      {!backgroundImage && (
-        <>
-          <div className="absolute top-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-blue-500/20 rounded-full blur-[100px] pointer-events-none z-0" />
-          <div className="absolute bottom-[-10%] left-[-10%] w-[50vh] h-[50vh] bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0" />
-        </>
-      )}
-
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center min-h-screen py-8">
+        {/* Decorative Blobs */}
+        {!backgroundImage && (
+          <>
+            <div className="absolute top-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-blue-500/20 rounded-full blur-[100px] pointer-events-none z-0" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[50vh] h-[50vh] bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0" />
+          </>
+        )}
         {/* Header Controls */}
         <div className="flex justify-between w-full mb-8 items-center px-4">
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2">
